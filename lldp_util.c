@@ -674,6 +674,7 @@ int is_macvtap(const char *ifname)
 {
 	int ret, s, realsize;
 	struct nlmsghdr *nlh;
+	void *temp;
 	struct ifinfomsg *ifinfo;
 	struct nlattr *tb[IFLA_MAX+1],
 		      *tb2[IFLA_INFO_MAX+1];
@@ -708,16 +709,16 @@ int is_macvtap(const char *ifname)
 		realsize = recv(s, NULL, 0, MSG_DONTWAIT | MSG_PEEK | MSG_TRUNC);
 	} while ((realsize < 0) && errno == EINTR);
 
-	if (realsize <= 0) {
+	if (realsize < 0) {
 		goto out_free;
 	}
 
-	free(nlh);
-	nlh = calloc(1, realsize);
-
-	if (!nlh) {
-		goto out;
+	temp = realloc(nlh, realsize);
+	if (!temp) {
+		goto out_free;
 	}
+	memset(temp, 0, realsize);
+	nlh = temp;
 
 	do {
 		ret = recv(s, (void *) nlh, realsize, MSG_DONTWAIT);
